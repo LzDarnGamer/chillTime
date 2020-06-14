@@ -1,8 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.XR.WSA.Input;
+﻿using UnityEngine;
 
 public class Connector : Object
 {
