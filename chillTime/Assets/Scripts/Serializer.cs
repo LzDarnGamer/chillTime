@@ -1,55 +1,73 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
+using UnityEditor;
 using UnityEngine;
-using UnityEngine.SocialPlatforms;
-using UnityEngine.UI;
-public class Serializer : Object
+public static class Serializer
 {
-    private static string PATH = "Resources/PlayerData/";
+    private static char SEPARTOR = '*';
 
-    private StreamReader sr;
-    private StreamWriter sw;
-    private string localPath;
-    private string playername;
-    public Serializer(string playername) {
-        this.playername = playername;
-        localPath = PATH + playername + ".txt";
-    }
 
-    public void WriteToFile(Player player, bool hasEnded) {
-        string playerName = player.Playername;
-        int highscore = player.Highscore;
-        Card[,] board = player.board.GameBoard;
-        sw = new StreamWriter(localPath, false);
-        sw.WriteLine(hasEnded);
-        sw.WriteLine(playerName);
-        sw.WriteLine(highscore);
-        StringBuilder s = new StringBuilder();
-        for (int i = 0; i < board.GetLength(0); i++) {
-            for (int j = 0; j < board.GetLength(1); j++) {
-                s.Append(board[i, j]);
+    //Biggest spaghetti ever
+    public static void WriteToFile(Player player) {
+        SerializedPlayer sp = new SerializedPlayer(player);
+        if (!PlayerPrefs.HasKey("Data")) {
+            string json = JsonUtility.ToJson(sp);
+            PlayerPrefs.SetString("Data", json);
+            PlayerPrefs.Save();
+        } else { 
+            string jsons = PlayerPrefs.GetString("Data");
+
+            List<SerializedPlayer> list = new List<SerializedPlayer>();
+            string[] strings = jsons.Split(SEPARTOR);
+            foreach (var item in strings) {
+                list.Add(JsonUtility.FromJson<SerializedPlayer>(item));
             }
+
+            foreach (var item in list) {
+                if (item.Playername.Equals(player.Playername) && !item.hasEndedGame) {
+                    list.Insert(list.IndexOf(item), sp);
+                    list.Remove(item);
+                    StringBuilder s = new StringBuilder();
+
+                    SerializedPlayer[] sl = list.ToArray<SerializedPlayer>();
+                    for(int i = 0; i < sl.Length; i++) {
+                        string temp = JsonUtility.ToJson(sl[i]);
+                        if(i != sl.Length-1) s.Append(temp + SEPARTOR);
+                        else s.Append(temp);
+                    }
+                    PlayerPrefs.SetString("Data", s.ToString());
+                    PlayerPrefs.Save();
+                    return;
+                }
+            }
+
+            string json = JsonUtility.ToJson(sp);
+            string joined = jsons + SEPARTOR + json;
+
+            PlayerPrefs.SetString("Data", joined);
+            PlayerPrefs.Save();
         }
     }
+    
+    public static Player ReadFromFile(string playername) {
+        if (PlayerPrefs.HasKey("Data")) {
+            List<SerializedPlayer> list = new List<SerializedPlayer>();
+            string jsons = PlayerPrefs.GetString("Data");
+            string[] strings = jsons.Split(SEPARTOR);
+            foreach (var item in strings) {
+                list.Add(JsonUtility.FromJson<SerializedPlayer>(item));
+            }
+            
+            foreach (var item in list) {
 
-    public Player ReadFromFile() {
-        if (File.Exists(localPath)) {
-            sr = File.OpenText(localPath);
-            string s = sr.ReadLine();
-            if (s.Equals("true")) {
-                string playerName = sr.ReadLine();
-                string highscore = sr.ReadLine();
-                return new Player(playerName, int.Parse(highscore), new Board(Game.COL, Game.ROW));
-            } else {
-                string playerName = sr.ReadLine();
-                string highscore = sr.ReadLine();
-                string board = sr.ReadLine();
-                return new Player(playerName, int.Parse(highscore), new Board(board));
+                if (item.Playername.Equals(playername) && !item.hasEndedGame) {
+                    return SerializedPlayer.DeSerialize(item);
+                }
             }
         }
-        return new Player(playername, 0, new Board(Game.COL, Game.ROW));
+        return new Player(playername, new Board(Game.COL, Game.ROW));
     }
 
 }

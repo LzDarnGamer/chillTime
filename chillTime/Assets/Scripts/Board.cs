@@ -15,21 +15,18 @@ public class Board : Object
         GameBoard = new Card[col, row];
         Initialize();
     }
-
-    public Board(string boardString) {
-        if (col * row % 3 != 0) throw new System.Exception();
-
+    public Board(int col, int row, int load) {
+        this.col = col;
+        this.row = row;
         GameBoard = new Card[col, row];
-        Initialize();
     }
-
     private void Initialize() {
         InitialCards();
-        Shuffle();
+        //Shuffle();
         int c = 0;
         for (int i = 0; i < GameBoard.GetLength(0); i++) {
             for (int j = 0; j < GameBoard.GetLength(1); j++) {
-                GameBoard[i, j] = new Card(cards[c], ResourceLoader.icons[cards[c]]);
+                GameBoard[i, j] = new Card(cards[c], ResourceLoader.icons[cards[c]], i, j);
                 c++;
             }
         }
